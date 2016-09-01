@@ -1,0 +1,30 @@
+{
+  "name": "d3js_worldmap",
+  "version": "1.0.0",
+  "description": "WorldMap with D3JS",
+  "main": "index.js",
+  "scripts": {
+    "start": "gulp default",
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/phattranky/D3JS_WorldMap.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/phattranky/D3JS_WorldMap/issues"
+  },
+  "homepage": "https://github.com/phattranky/D3JS_WorldMap#readme",
+  "devDependencies": {
+    "gulp": "^3.9.1",
+    "gulp-connect": "^5.0.0"
+  },
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "d3": "^4.2.2",
+    "jquery": "^3.1.0",
+    "topojson": "^1.6.26"
+  }
+}
