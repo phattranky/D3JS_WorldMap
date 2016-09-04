@@ -49,8 +49,12 @@
         background: -o-linear-gradient(top, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
         background: -ms-linear-gradient(top, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
         background: linear-gradient(to bottom, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
-        
-        
+        -webkit-transform: perspective(1366px) rotateX(45deg);
+        -webkit-transform-style: preserve-3d;  
+        -webkit-transform-origin: top;
+        transform: perspective(1366px) rotateX(45deg);
+        transform-style: preserve-3d;  
+        transform-origin: top;
       }
       
       .overlay {
@@ -58,16 +62,6 @@
         pointer-events: all;
       }
       
-      .map-container {
-        -webkit-perspective: 1366px;
-        perspective: 768px;
-      }
-      .land-container {
-        -webkit-transform-origin: center; /* Chrome, Safari, Opera  */
-        transform-origin: center;
-        -webkit-transform: rotateX(60deg); /* Chrome, Safari, Opera  */
-        transform: rotateX(60deg);
-      }
     </style>
   </head>
 <body>
@@ -83,41 +77,7 @@
     var height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
     var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
     
-    //var projection = d3.geoMercator();
-    // var x = d3.scaleLinear()
-    // .range([0, width]);
-
-    // var y = d3.scaleLinear()
-    //     .range([0, height]);
-    
-    // var projection = d3.geoTransform({
-    //   point: function(px, py) { this.stream.point(x(px), y(py)); }
-    // });
-    
-    var sqrtPi = sqrt(Math.PI);
-    var halfPi = Math.PI / 2;
-    var sin = Math.sin;
-    function sqrt(x) {
-      return x > 0 ? Math.sqrt(x) : 0;
-    }
-    function asin(x) {
-      return x > 1 ? halfPi : x < -1 ? -halfPi : Math.asin(x);
-    }
-
-    var customProjection = function() {
-      return d3.geoProjection(function (lambda, phi) {
-          var alpha = sqrt(1 - sin(phi));
-          return [(2 / sqrtPi) * lambda * alpha, sqrtPi * (1 - alpha)];
-        })
-          .scale(95.6464)
-          .center([0, 30]);
-    }
-    
-    // var projection = d3.geoCollignon()
-    // .scale(500)
-    // .translate([width / 2, height / 2])
-    // .precision(.1);
-    var projection = customProjection()
+    var projection = d3.geoMercator()
       .scale(800)
       .translate([width / 2, height / 2])
       .precision(.1);
@@ -126,24 +86,19 @@
     var svg = d3.select("#map")
       .append("svg")
       .attr("width", width)
-      .attr("height", height);
+      .attr("height", 2*height);
   
     var mapGroup = svg.append("g").attr('class', 'map-container');
 
     //Grid Line
     var graticule = d3.geoGraticule()
-      .step([6, 2]);
+      .step([10, 6]);
     
     mapGroup.append("path")
       .datum(graticule)
       .attr("class", "graticule")
       .attr("d", path);
 
-    var zoomed = function () {
-      var transform = d3.event.transform;
-      mapGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
-    };
-    
     var zoom = d3.zoom()
       .scaleExtent([1, 8])
       .translateExtent([[0, 0], [width, height]])
@@ -164,18 +119,15 @@
       //MEX_adm1
       //subunits
       var states = topojson.feature(data, data.objects.subunits);
-      var mapProjection = d3.geoMercator();
-      var mapPath = d3.geoPath().projection(mapProjection);
       //Rotate: https://en.wikipedia.org/wiki/Aircraft_principal_axes
       //Yaw - Pitch - Roll
-      //projection.scale(1).translate([0, 0]);
-      mapProjection.scale(1).translate([0, 0]).rotate([0, 0, 0]);
-
-      var b = mapPath.bounds(states);
-      var s = .9 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);
-      var t = [(width - s * (b[1][0] + b[0][0])) / 2, 300 + (height - s * (b[1][1] + b[0][1])) / 2];
+      projection.scale(1).translate([0, 0]);
       
-      mapProjection.scale(s).translate(t);
+      var b = path.bounds(states);
+      var s = .9 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);
+      var t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
+      
+      projection.scale(s).translate(t);
       
       var landGroup = mapGroup.append("g").attr('class', 'land-container');
       var map = landGroup.selectAll('path').data(states.features);
@@ -183,7 +135,7 @@
       map.enter()
         .append('path')
         .attr("class", "land")
-        .attr('d', mapPath)
+        .attr('d', path)
 
       map.exit().remove();
     });
