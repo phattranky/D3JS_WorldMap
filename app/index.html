@@ -6,10 +6,6 @@
     <link rel="stylesheet" href="/libs/bootstrap/css/bootstrap.min.css">
     <link rel="stylesheet" href="/libs/bootstrap/css/bootstrap-theme.min.css">
     <style type="text/css">
-      svg {
-        border: 1px solid #ddd;
-      }
-      
       body {
         background: #fcfcfa;
       }
@@ -26,11 +22,11 @@
       
       .graticule {
         fill: none;
-        stroke: #222;
+        stroke: #000000;
         stroke-width: .5px;
-        stroke-opacity: .5;
+        stroke-opacity: .7;
       }
-      
+
       .land {
         fill: #222;
       }
@@ -46,7 +42,16 @@
       }
       
       #map {
-        background-color: #092a51;
+        background: #092a51; /* For browsers that do not support gradients */
+        background: -webkit-linear-gradient(#092a51, #08284f , #041d3f); /* For Safari 5.1 to 6.0 */
+        background: -o-linear-gradient(#092a51, #08284f , #041d3f); /* For Opera 11.1 to 12.0 */
+        background: -moz-linear-gradient(#092a51, #08284f , #041d3f); /* For Firefox 3.6 to 15 */
+        background: linear-gradient(#092a51, #08284f , #041d3f); /* Standard syntax */
+      }
+      
+      .overlay {
+        fill: none;
+        pointer-events: all;
       }
     </style>
   </head>
@@ -58,7 +63,6 @@
   
   <script src="/libs/jquery/jquery.min.js"></script>
   <script src="/libs/d3/d3.min.js"></script>
-  <script src="//d3js.org/d3-geo-projection.v1.min.js"></script>
   <script src="/libs/topojson/topojson.min.js"></script>
   <script type="text/javascript">
     var height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
@@ -75,56 +79,100 @@
     //   point: function(px, py) { this.stream.point(x(px), y(py)); }
     // });
     
-    var projection = d3.geoCollignon()
-    .scale(500)
-    .translate([width / 2, height / 2])
-    .precision(.1);
+    var sqrtPi = sqrt(Math.PI);
+    var halfPi = Math.PI / 2;
+    var sin = Math.sin;
+    function sqrt(x) {
+      return x > 0 ? Math.sqrt(x) : 0;
+    }
+    function asin(x) {
+      return x > 1 ? halfPi : x < -1 ? -halfPi : Math.asin(x);
+    }
+
+    var customProjection = function() {
+      return d3.geoProjection(function (lambda, phi) {
+          var alpha = sqrt(1 - sin(phi));
+          return [(2 / sqrtPi) * lambda * alpha, sqrtPi * (1 - alpha)];
+        })
+          .scale(95.6464)
+          .center([0, 30]);
+    }
+    
+    // var projection = d3.geoCollignon()
+    // .scale(500)
+    // .translate([width / 2, height / 2])
+    // .precision(.1);
+    var projection = customProjection()
+      .scale(800)
+      .translate([width / 2, height / 2])
+      .precision(.1);
     
     var path = d3.geoPath().projection(projection);
     var svg = d3.select("#map")
       .append("svg")
       .attr("width", width)
       .attr("height", height);
+  
+    var mapGroup = svg.append("g");
 
     //Grid Line
     var graticule = d3.geoGraticule()
-      .step([18, 9]);
-
-    svg.append("path")
+      .step([10, 6]);
+    
+    mapGroup.append("path")
       .datum(graticule)
       .attr("class", "graticule")
       .attr("d", path);
+
+    var zoomed = function () {
+      var transform = d3.event.transform;
+      mapGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
+    };
+    
+    var zoom = d3.zoom()
+      .scaleExtent([1, 8])
+      .translateExtent([[0, 0], [width, height]])
+      .on("zoom", move);
+    var mapSize = {width:0 , height: 0};
       
-    var mapGroup = svg.append("g");
+    function move () {
+      var transform = d3.event.transform;
+      mapGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
+    }
+
+    svg.append("rect")
+      .attr("class", "overlay")
+      .attr("width", width)
+      .attr("height", height)
+      .call(zoom);
       
     d3.json('/data/indonesia.json', function(data) {
-      console.log(data);
+      //MEX_adm1
+      //subunits
       var states = topojson.feature(data, data.objects.subunits);
       var mapProjection = d3.geoMercator();
       var mapPath = d3.geoPath().projection(mapProjection);
       //Rotate: https://en.wikipedia.org/wiki/Aircraft_principal_axes
       //Yaw - Pitch - Roll
-      //projection.scale(1).translate([0, 0]);
-      mapProjection.scale(1).translate([0, 0]).rotate([0, 0, 0]);
+      projection.scale(1).translate([0, 0]);
+      //mapProjection.scale(1).translate([0, 0]).rotate([0, 0, 0]);
 
-      var b = mapPath.bounds(states);
-      var s = .90 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);
+      var b = path.bounds(states);
+      var s = .9 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);
       var t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
       
-      mapProjection.scale(s).translate(t);
+      projection.scale(s).translate(t);
       var map = mapGroup.selectAll('path').data(states.features);
-      
+      mapSize = {
+        width: .9 / ((b[1][0] - b[0][0]) / width),
+        height: .9 / ((b[1][1] - b[0][1]) / height)
+      };
+
       map.enter()
         .append('path')
-        .attr('d', mapPath)
+        .attr('d', path)
 
       map.exit().remove();
-      //console.log(data);
-      //Test
-      // svg.insert("path", ".graticule")
-      // .datum(topojson.feature(data, data.objects.subunits))
-      // .attr("class", "land")
-      // .attr("d", path);
     });
   </script>
 </body>
