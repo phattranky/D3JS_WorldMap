@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>D3.JS World Map</title>
+    
+    <link rel="stylesheet" href="/libs/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/libs/bootstrap/css/bootstrap-theme.min.css">
+    <style type="text/css">
+      body {
+        background: #fcfcfa;
+      }
+      
+      text {
+        font-family: Helvetica;
+        font-weight: 300;
+        font-size: 12px;
+      }
+    
+      .stroke {
+        fill: none;
+        stroke: #000;
+        stroke-width: 3px;
+      }
+      
+      .fill {
+        fill: #fff;
+      }
+      
+      .graticule {
+        fill: none;
+        stroke: #000000;
+        stroke-width: .5px;
+        stroke-opacity: .7;
+      }
+
+      .land {
+        fill: #084B91;
+      }
+      
+      .land.selected {
+        fill: #0673E8;
+      }
+      
+      .boundary {
+        fill: none;
+        stroke: #fff;
+        stroke-width: .5px;
+      }
+      
+      body {
+        overflow: hidden;
+      }
+      
+      #map {
+        background: rgba(10,43,81,1);
+        background: -moz-linear-gradient(top, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
+        background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(10,43,81,1)), color-stop(58%, rgba(10,43,81,1)), color-stop(100%, rgba(4,24,51,1)));
+        background: -webkit-linear-gradient(top, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
+        background: -o-linear-gradient(top, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
+        background: -ms-linear-gradient(top, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
+        background: linear-gradient(to bottom, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
+        
+        
+      }
+      
+      .overlay {
+        fill: none;
+        pointer-events: all;
+      }
+      
+      .map-container {
+        -webkit-perspective: 1366px;
+        perspective: 768px;
+      }
+      .land-container {
+        -webkit-transform: rotateX(60deg);
+        transform: rotateX(60deg);
+        transform-origin: 100%;
+      }
+      
+      .city-container {
+        
+      }
+
+    </style>
+  </head>
+<body>
+  <div class="container">
+    <h1>World Map</h1>
+  </div>
+  <div id="map"></div>
+  
+  <script src="/libs/jquery/jquery.min.js"></script>
+  <script src="/libs/d3/d3.min.js"></script>
+  <script src="//d3js.org/d3-geo-projection.v1.min.js"></script>
+  <script src="/libs/topojson/topojson.min.js"></script>
+  <script type="text/javascript">
+    var height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
+    var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
+    
+    var projection = d3.geoCollignon()
+      .scale(93)
+      .translate([width / 2, height / 2])
+      .rotate([0, 0]).center([0, 0]);
+    
+    var path = d3.geoPath().projection(projection);
+    var svg = d3.select("#map")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height);
+      
+    svg.append("defs").append("path")
+    .datum({type: "Sphere"})
+    .attr("id", "sphere")
+    .attr("d", path);
+
+    //Grid Line
+    var graticule = d3.geoGraticule();
+    var mapGroup = svg.append("g");
+    
+    mapGroup.append("use")
+        .attr("class", "stroke")
+        .attr("xlink:href", "#sphere");
+    
+    mapGroup.append("use")
+        .attr("class", "fill")
+        .attr("xlink:href", "#sphere");
+    
+    mapGroup.append("path")
+      .datum(graticule)
+      .attr("class", "graticule")
+      .attr("d", path);
+      
+    var zoom = d3.zoom()
+      .scaleExtent([1, 8])
+      .translateExtent([[0, 0], [width, height]])
+      .on("zoom", move);
+      
+    function move () {
+      var transform = d3.event.transform;
+      mapGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
+    }
+      
+    svg.call(zoom);
+      
+    d3.json("/data/indonesia.json", function(error, data) {
+      if (error) throw error;
+    
+      mapGroup.insert("path", ".graticule")
+          .datum(topojson.feature(data, data.objects.states_provinces))
+          .attr("class", "land")
+          .attr("d", path);
+    });
+  </script>
+</body>
+</html>

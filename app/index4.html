@@ -60,7 +60,6 @@
         background: -ms-linear-gradient(top, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
         background: linear-gradient(to bottom, rgba(10,43,81,1) 0%, rgba(10,43,81,1) 58%, rgba(4,24,51,1) 100%);
         
-        
       }
       
       .overlay {
@@ -73,9 +72,8 @@
         perspective: 768px;
       }
       .land-container {
-        -webkit-transform: rotateX(60deg);
-        transform: rotateX(60deg);
-        transform-origin: 100%;
+        /*-webkit-transform: rotateX(60deg);*/
+        /*transform: rotateX(60deg);*/
       }
       
       .city-container {
@@ -131,11 +129,10 @@
     // .scale(500)
     // .translate([width / 2, height / 2])
     // .precision(.1);
-    var projection = customProjection()
-      .scale(800)
+    var projection = d3.geoMercator()
       .translate([width / 2, height / 2])
       .precision(.1);
-    
+
     var path = d3.geoPath().projection(projection);
     var svg = d3.select("#map")
       .append("svg")
@@ -205,7 +202,7 @@
       
       mapProjection.scale(s).translate(t);
       
-      var landGroup = mapGroup.append("g");
+      var landGroup = mapGroup.append("g").attr('class', 'land-container');
       //DropShadow filter
       // var filter = landGroup.append("filter")
       //   .attr("id", "drop-shadow")
@@ -237,19 +234,13 @@
           d3.select('.land.selected').attr('class', 'land');
           d3.select('#' + geoId(d)).attr('class', 'land selected');
         });
-        
         //.style("filter", "url(#drop-shadow)") //Add filter drop shadow
 
       map.exit().remove();
       
-      setTimeout(function () {
-        landGroup.attr('class', 'land-container');
-      }, 5000);
-      
       //Cities
       var cityGroup = landGroup.append("g").attr('class', 'city-container');
-      //cityGroup.attr('transform', 'rotate(45 50 50)');
-      var cityGroup2 = mapGroup.append("g");
+          //cityGroup.attr('transform', 'rotate(45 50 50)');
       //Draw Population Radius
       var radius = d3.scaleLinear().domain([0,100]).range([5,30]);
       
@@ -274,17 +265,6 @@
           .attr('dx', 5)
           .attr('dy', 3)
           .text(function(d) {return d.name});
-          
-        //Test
-        var cityPoints2 = cityGroup2.selectAll('circle').data(cities);
-        cityPoints2.enter()
-          .append('circle')
-          .attr('cx', function(d) {
-            return mapProjection([d.lon, d.lat])[0]
-          })
-          .attr('cy', function(d) {return mapProjection([d.lon, d.lat])[1]})
-          .attr('r', function(d) { return radius(parseFloat(d.population)/100); })
-          .attr('fill', 'steelblue');
       });
     });
   </script>

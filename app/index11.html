@@ -13,7 +13,7 @@
       text {
         font-family: Helvetica;
         font-weight: 300;
-        font-size: 12px;
+        font-size: 1px;
       }
     
       .stroke {
@@ -29,12 +29,16 @@
       .graticule {
         fill: none;
         stroke: #000000;
-        stroke-width: .5px;
+        stroke-width: .2px;
         stroke-opacity: .7;
       }
 
       .land {
         fill: #084B91;
+      }
+      
+      .land2 {
+        fill: #cccccc;
       }
       
       .land.selected {
@@ -67,20 +71,6 @@
         fill: none;
         pointer-events: all;
       }
-      
-      .map-container {
-        -webkit-perspective: 1366px;
-        perspective: 768px;
-      }
-      .land-container {
-        -webkit-transform: rotateX(60deg);
-        transform: rotateX(60deg);
-        transform-origin: 100%;
-      }
-      
-      .city-container {
-        
-      }
 
     </style>
   </head>
@@ -92,49 +82,15 @@
   
   <script src="/libs/jquery/jquery.min.js"></script>
   <script src="/libs/d3/d3.min.js"></script>
+  <script src="//d3js.org/d3-geo-projection.v1.js"></script>
   <script src="/libs/topojson/topojson.min.js"></script>
   <script type="text/javascript">
     var height = window.innerHeight || document.documentElement.clientHeight || document.body.clientHeight;
     var width = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth;
     
-    //var projection = d3.geoMercator();
-    // var x = d3.scaleLinear()
-    // .range([0, width]);
-
-    // var y = d3.scaleLinear()
-    //     .range([0, height]);
-    
-    // var projection = d3.geoTransform({
-    //   point: function(px, py) { this.stream.point(x(px), y(py)); }
-    // });
-    
-    var sqrtPi = sqrt(Math.PI);
-    var halfPi = Math.PI / 2;
-    var sin = Math.sin;
-    function sqrt(x) {
-      return x > 0 ? Math.sqrt(x) : 0;
-    }
-    function asin(x) {
-      return x > 1 ? halfPi : x < -1 ? -halfPi : Math.asin(x);
-    }
-
-    var customProjection = function() {
-      return d3.geoProjection(function (lambda, phi) {
-          var alpha = sqrt(1 - sin(phi));
-          return [(2 / sqrtPi) * lambda * alpha, sqrtPi * (1 - alpha)];
-        })
-          .scale(95.6464)
-          .center([0, 30]);
-    }
-    
-    // var projection = d3.geoCollignon()
-    // .scale(500)
-    // .translate([width / 2, height / 2])
-    // .precision(.1);
-    var projection = customProjection()
-      .scale(800)
-      .translate([width / 2, height / 2])
-      .precision(.1);
+    var projection = d3.geoCollignon()
+    .scale(500)
+    .translate([width / 2, height / 2]);
     
     var path = d3.geoPath().projection(projection);
     var svg = d3.select("#map")
@@ -142,20 +98,20 @@
       .attr("width", width)
       .attr("height", height);
   
-    var mapGroup = svg.append("g").attr('class', 'map-container');
+    var graticuleGroup = svg.append("g");
 
     //Grid Line
     var graticule = d3.geoGraticule()
-      .step([6, 2]);
+      .step([6, 3]);
     
-    mapGroup.append("path")
+    graticuleGroup.append("path")
       .datum(graticule)
       .attr("class", "graticule")
       .attr("d", path);
 
     var zoomed = function () {
       var transform = d3.event.transform;
-      mapGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
+      graticuleGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
     };
     
     var zoom = d3.zoom()
@@ -165,68 +121,40 @@
       
     function move () {
       var transform = d3.event.transform;
-      mapGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
+      graticuleGroup.attr("transform", "translate(" + transform.x + "," + transform.y + ") scale(" + transform.k + ")"); 
     }
-
-    // svg.append("rect")
-    //   .attr("class", "overlay")
-    //   .attr("width", width)
-    //   .attr("height", height)
-    //   .call(zoom);
-    
-    // mapGroup.append("rect")
-    //   .attr("class", "overlay")
-    //   .attr("width", width)
-    //   .attr("height", height)
-    //   .call(zoom);
     
     svg.call(zoom);
       
     var geoId = function(d) {
       return 'c' + d.properties.OBJECTID_1;
     };
+    
+    function matrix(a, b, c, d, tx, ty) {
+      return d3.geoTransform({
+        point: function(x, y) { this.stream.point(a * x + b * y + tx, c * x + d * y + ty); }
+      });
+    }
       
     d3.json('/data/indonesia.json', function(data) {
       console.log(data);
       //MEX_adm1
       //subunits
-      var states = topojson.feature(data, data.objects.states_provinces
-);
+      var states = topojson.feature(data, data.objects.subunits);
+      
       var mapProjection = d3.geoMercator();
       var mapPath = d3.geoPath().projection(mapProjection);
-      //Rotate: https://en.wikipedia.org/wiki/Aircraft_principal_axes
-      //Yaw - Pitch - Roll
-      //projection.scale(1).translate([0, 0]);
-      mapProjection.scale(1).translate([0, 0]).rotate([0, 0, 0]);
-
+      
+      mapProjection.scale(1).translate([0, 0]).rotate([0, 0, -30]);
       var b = mapPath.bounds(states);
       var s = .9 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);
       var t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
       
       mapProjection.scale(s).translate(t);
       
-      var landGroup = mapGroup.append("g");
-      //DropShadow filter
-      // var filter = landGroup.append("filter")
-      //   .attr("id", "drop-shadow")
-      //   .attr("height", "130%");
-      // filter.append("feGaussianBlur")
-      //   .attr("in", "SourceAlpha")
-      //   .attr("stdDeviation", 5)
-      //   .attr("result", "blur");
-      // filter.append("feOffset")
-      //   .attr("in", "blur")
-      //   .attr("dx", 5)
-      //   .attr("dy", 5)
-      //   .attr("result", "offsetBlur");
-      // var feMerge = filter.append("feMerge");
-
-      //   feMerge.append("feMergeNode")
-      //       .attr("in", "offsetBlur")
-      //   feMerge.append("feMergeNode")
-      //       .attr("in", "SourceGraphic");
-        
-      var map = landGroup.selectAll('path').data(states.features);
+      var mapGroup = graticuleGroup.append("g");
+      
+      var map = mapGroup.selectAll('path').data(states.features);
 
       map.enter()
         .append('path')
@@ -242,18 +170,9 @@
 
       map.exit().remove();
       
-      setTimeout(function () {
-        landGroup.attr('class', 'land-container');
-      }, 5000);
+      var cityGroup = mapGroup.append("g").attr('class', 'city-container');
+      var radius = d3.scaleLinear().domain([100,10000]).range([0,10]);
       
-      //Cities
-      var cityGroup = landGroup.append("g").attr('class', 'city-container');
-      //cityGroup.attr('transform', 'rotate(45 50 50)');
-      var cityGroup2 = mapGroup.append("g");
-      //Draw Population Radius
-      var radius = d3.scaleLinear().domain([0,100]).range([5,30]);
-      
-      //Add cities with CSV
       d3.csv('/data/indonesia-cities.csv', function(cities) {
         console.log("Cities", cities);
         var cityPoints = cityGroup.selectAll('circle').data(cities);
@@ -264,28 +183,48 @@
             return mapProjection([d.lon, d.lat])[0]
           })
           .attr('cy', function(d) {return mapProjection([d.lon, d.lat])[1]})
-          .attr('r', function(d) { return radius(parseFloat(d.population)/100); })
+          .attr('r', function(d) { return radius(parseFloat(5000)); })
           .attr('fill', 'steelblue');
           
-        cityText.enter()
-          .append('text')
-          .attr('x', function(d) {return mapProjection([d.lon, d.lat])[0]})
-          .attr('y', function(d) {return mapProjection([d.lon, d.lat])[1]})
-          .attr('dx', 5)
-          .attr('dy', 3)
-          .text(function(d) {return d.name});
-          
-        //Test
-        var cityPoints2 = cityGroup2.selectAll('circle').data(cities);
-        cityPoints2.enter()
-          .append('circle')
-          .attr('cx', function(d) {
-            return mapProjection([d.lon, d.lat])[0]
-          })
-          .attr('cy', function(d) {return mapProjection([d.lon, d.lat])[1]})
-          .attr('r', function(d) { return radius(parseFloat(d.population)/100); })
-          .attr('fill', 'steelblue');
+        // cityText.enter()
+        //   .append('text')
+        //   .attr('x', function(d) {return projection([d.lon, d.lat])[0]})
+        //   .attr('y', function(d) {return projection([d.lon, d.lat])[1]})
+        //   .attr('dx', 5)
+        //   .attr('dy', 3)
+        //   .text(function(d) {return d.name});
+
       });
+    });
+    
+    d3.json('/data/indonesia.json', function(data) {
+      console.log(data);
+      //MEX_adm1
+      //subunits
+      var states = topojson.feature(data, data.objects.subunits);
+      
+      var mapProjection = d3.geoMercator();
+      var mapPath = d3.geoPath().projection(mapProjection);
+      
+      mapProjection.scale(1).translate([0, 0]).rotate([0, 0, 0]);
+      var b = mapPath.bounds(states);
+      var s = .9 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height);
+      var t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
+      
+      mapProjection.scale(s).translate(t);
+      
+      var mapGroup = graticuleGroup.append("g");
+      
+      var map = mapGroup.selectAll('path').data(states.features);
+
+      map.enter()
+        .append('path')
+        .attr("class", "land2")
+        .attr('d', mapPath)
+        .attr('id', geoId)
+
+      map.exit().remove();
+
     });
   </script>
 </body>

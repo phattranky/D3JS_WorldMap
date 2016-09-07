@@ -19,6 +19,7 @@
 * https://github.com/d3noob/D3-Tips-and-Tricks/blob/master/D3-Tips-and-Tricks-Latest.pdf
 * https://bl.ocks.org/enjalot/raw/211bd42857358a60a936/
 * http://bl.ocks.org/mbostock/4987520
+* http://christopheviau.com/d3list/gallery.html - tons of examples
 
 ##GEO Data Resources
 * Shapefiles: http://www.diva-gis.org/gdata
